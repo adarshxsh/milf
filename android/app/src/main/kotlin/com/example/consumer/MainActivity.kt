@@ -1,7 +1,6 @@
 package com.example.consumer
 
 import io.flutter.embedding.android.FlutterActivity
-
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import com.example.consumer.features.orchestrator.FlutterBridge
@@ -14,8 +13,9 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
-        val osReader = OsReader()
-        val slotManager = SlotManager(filesDir = filesDir)
+        val osReader = OsReader(applicationContext)
+        // Pass both osReader and filesDir to SlotManager
+        val slotManager = SlotManager(osReader = osReader, filesDir = filesDir)
         val flutterBridge = FlutterBridge(osReader, slotManager)
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)

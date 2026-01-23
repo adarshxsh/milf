@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:flutter/services.dart';
 
 class NativeBridge {
@@ -48,12 +47,12 @@ class NativeBridge {
     }
   }
 
-  Future<Map<String, String>?> runWasmTest(
+  Future<Map<String, dynamic>?> runWasmTest(
     Uint8List wasmBinary,
     Map<String, dynamic> input,
   ) async {
     try {
-      final result = await _channel.invokeMapMethod<String, String>(
+      final result = await _channel.invokeMapMethod<String, dynamic>(
         'runWasmTest',
         {'wasmBinary': wasmBinary, 'input': input},
       );

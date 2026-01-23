@@ -1,53 +1,51 @@
 package com.example.consumer.features.process_manager
 
 import com.example.consumer.features.wasm_runtime.WasmEngine
+import com.example.consumer.features.os_stats.OsReader
 import kotlinx.coroutines.*
 import java.io.File
 
 class SlotManager(
     private val wasmEngine: WasmEngine = WasmEngine(),
-    private val ioScope: CoroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob()),
-    private val filesDir: File? = null
+    private val osReader: OsReader,
+    private val filesDir: File,
+    private val ioScope: CoroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 ) {
 
     fun checkAvailableProcesses(): List<String> {
-        // TODO: Implement check for available/sleeping processes
         return emptyList()
     }
 
-    // Moved to async execution to prevent UI throttling
     fun startProcessSlot(
         wasmBinary: ByteArray, 
         input: Map<String, Any>, 
         metadata: Map<String, Any>,
-        onComplete: (String, String) -> Unit // Callback to return path and content
+        onComplete: (String, String, Long) -> Unit // path, content, memoryDelta
     ) {
         ioScope.launch {
             try {
-                // Security: Enforce strict timeout
-                withTimeout(5000L) { // 5 second max execution time
+                withTimeout(5000L) {
                     val inputBytes = input.toString().toByteArray() 
                     
-                    println("Starting WASM execution in background thread...")
+                    // Measure before
+                    val memBefore = osReader.getAppMemory()
+                    
                     val resultString = wasmEngine.execute(wasmBinary, inputBytes)
                     
-                    // Storing the result in a file for testing purposes
+                    // Measure after
+                    val memAfter = osReader.getAppMemory()
+                    val memDelta = if (memAfter > memBefore) memAfter - memBefore else 0L
+                    
                     val outputFile = File(filesDir, "wasm_output_${System.currentTimeMillis()}.txt")
                     outputFile.writeText(resultString)
                     
-                    println("WASM execution completed. Result stored at: ${outputFile.absolutePath}")
-                    onComplete(outputFile.absolutePath, resultString)
+                    onComplete(outputFile.absolutePath, resultString, memDelta)
                 }
-            }
- catch (e: TimeoutCancellationException) {
-                println("Security Alert: WASM Execution timed out. Terminating slot.")
             } catch (e: Exception) {
-                println("Error during WASM execution: ${e.message}")
+                onComplete("", "Error: ${e.message}", 0L)
             }
         }
     }
 
-    fun stopProcessSlot(pid: String) {
-        // TODO: Implement stopping a process slot
-    }
+    fun stopProcessSlot(pid: String) {}
 }
