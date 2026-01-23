@@ -38,4 +38,19 @@ class OsReader(private val context: Context) {
         // Usually requires reading /proc/stat if accessible or using internal telemetry
         return 0.0
     }
+
+    /**
+     * Returns device-wide memory info in KB.
+     */
+    fun getDeviceMemory(): Map<String, Long> {
+        val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        val outInfo = ActivityManager.MemoryInfo()
+        am.getMemoryInfo(outInfo)
+        return mapOf(
+            "avail" to outInfo.availMem / 1024,
+            "total" to outInfo.totalMem / 1024,
+            "threshold" to outInfo.threshold / 1024,
+            "lowMemory" to if (outInfo.lowMemory) 1L else 0L
+        )
+    }
 }

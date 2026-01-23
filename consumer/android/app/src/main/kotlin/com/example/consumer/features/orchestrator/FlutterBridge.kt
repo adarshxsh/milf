@@ -23,13 +23,21 @@ class FlutterBridge(
             }
             "getOSResources" -> {
                val appMemory = osReader.getAppMemory()
-               result.success(mapOf("cpu" to 0.0, "mem" to appMemory))
+               val deviceMem = osReader.getDeviceMemory()
+               result.success(mapOf(
+                   "cpu" to 0.0, 
+                   "mem" to appMemory,
+                   "deviceAvail" to deviceMem["avail"],
+                   "deviceTotal" to deviceMem["total"],
+                   "lowMemory" to (deviceMem["lowMemory"] == 1L)
+               ))
             }
             "runWasmTest" -> {
                 val wasmBinary = call.argument<ByteArray>("wasmBinary") ?: ByteArray(0)
                 val input = call.argument<Map<String, Any>>("input") ?: emptyMap()
+                val memoryLimitMB = call.argument<Int>("memoryLimitMB") ?: 300
                 
-                slotManager.startProcessSlot(wasmBinary, input, emptyMap()) { filePath, content, memDelta ->
+                slotManager.startProcessSlot(wasmBinary, input, emptyMap(), memoryLimitMB) { filePath, content, memDelta ->
                     result.success(mapOf(
                         "path" to filePath,
                         "content" to content,

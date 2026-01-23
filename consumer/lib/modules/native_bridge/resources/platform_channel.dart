@@ -50,11 +50,16 @@ class NativeBridge {
   Future<Map<String, dynamic>?> runWasmTest(
     Uint8List wasmBinary,
     Map<String, dynamic> input,
+    int memoryLimitMB,
   ) async {
     try {
       final result = await _channel.invokeMapMethod<String, dynamic>(
         'runWasmTest',
-        {'wasmBinary': wasmBinary, 'input': input},
+        {
+          'wasmBinary': wasmBinary,
+          'input': input,
+          'memoryLimitMB': memoryLimitMB,
+        },
       );
       return result;
     } on PlatformException catch (e) {

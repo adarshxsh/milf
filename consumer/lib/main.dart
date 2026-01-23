@@ -64,9 +64,15 @@ class _ConsumerHomePageState extends State<ConsumerHomePage> {
   final List<WasmJob> _jobs = [];
   bool _isProcessing = false;
   final NativeBridge _bridge = NativeBridge();
+  int _activeJobsCount = 0;
+  static const int maxConcurrentJobs = 3;
 
   // Stats
   double _currentRam = 0.0;
+  double _deviceAvail = 0.0;
+  double _deviceTotal = 0.0;
+  bool _lowMemory = false;
+  int _perJobMemoryLimit = 50; // Default limit 50MB
   Timer? _statsTimer;
 
   @override
@@ -88,6 +94,11 @@ class _ConsumerHomePageState extends State<ConsumerHomePage> {
         setState(() {
           _currentRam =
               (stats['mem'] as int).toDouble() / 1024.0; // Convert to MB
+          _deviceAvail =
+              (stats['deviceAvail'] as int? ?? 0).toDouble() / 1024.0;
+          _deviceTotal =
+              (stats['deviceTotal'] as int? ?? 0).toDouble() / 1024.0;
+          _lowMemory = stats['lowMemory'] as bool? ?? false;
         });
       }
     });
@@ -116,18 +127,30 @@ class _ConsumerHomePageState extends State<ConsumerHomePage> {
 
     // We use a while loop to act as a scheduler
     while (_jobs.any((j) => j.status == 'Pending')) {
-      // Check RAM pressure before spawning more
-      if (_currentRam < ramLimit) {
+      // Check RAM pressure and active jobs before spawning more
+      if (_currentRam < ramLimit && _activeJobsCount < maxConcurrentJobs) {
         final job = _jobs.firstWhere((j) => j.status == 'Pending');
 
         // Launch job but DON'T await it here so we can spawn the next one simultaneously
         unawaited(_runSingleJob(job));
 
-        // Small delay to allow RAM reading to update or avoid CPU spike during spawn
-        await Future.delayed(const Duration(milliseconds: 50));
+        // Small delay
+        await Future.delayed(const Duration(milliseconds: 100));
       } else {
-        // Wait for RAM to be released before checking again
+        // Wait for resources to be released before checking again
         await Future.delayed(const Duration(milliseconds: 200));
+        // Force update RAM stats immediately to be more reactive
+        final stats = await _bridge.getOSResources();
+        if (stats != null) {
+          setState(() {
+            _currentRam = (stats['mem'] as int).toDouble() / 1024.0;
+            _deviceAvail =
+                (stats['deviceAvail'] as int? ?? 0).toDouble() / 1024.0;
+            _deviceTotal =
+                (stats['deviceTotal'] as int? ?? 0).toDouble() / 1024.0;
+            _lowMemory = stats['lowMemory'] as bool? ?? false;
+          });
+        }
       }
     }
 
@@ -142,12 +165,18 @@ class _ConsumerHomePageState extends State<ConsumerHomePage> {
   }
 
   Future<void> _runSingleJob(WasmJob job) async {
-    setState(() => job.status = 'Compiling...');
+    setState(() {
+      job.status = 'Compiling...';
+      _activeJobsCount++;
+    });
 
     // Simulating C -> WASM Compile
     await Future.delayed(const Duration(seconds: 2));
 
-    if (!mounted) return;
+    if (!mounted) {
+      _activeJobsCount--;
+      return;
+    }
     setState(() => job.status = 'Running...');
 
     final dummyWasm = Uint8List.fromList([
@@ -163,14 +192,20 @@ class _ConsumerHomePageState extends State<ConsumerHomePage> {
     final result = await _bridge.runWasmTest(dummyWasm, {
       "file": job.fileName,
       "mode": "concurrent_execution",
-    });
+    }, _perJobMemoryLimit);
 
-    if (!mounted) return;
+    if (!mounted) {
+      _activeJobsCount--;
+      return;
+    }
     setState(() {
-      job.status = 'Completed';
+      job.status = (result?['content']?.startsWith('Error') ?? true)
+          ? 'Failed'
+          : 'Completed';
       job.output = result?['content'];
       job.path = result?['path'];
       job.memoryUsed = result?['memDelta'] as int?;
+      _activeJobsCount--;
     });
   }
 
@@ -250,6 +285,55 @@ class _ConsumerHomePageState extends State<ConsumerHomePage> {
               Text(
                 '${_currentRam.toStringAsFixed(2)} MB',
                 style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'PER-JOB RAM LIMIT: ${_perJobMemoryLimit} MB',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.orangeAccent,
+                      ),
+                    ),
+                    Slider(
+                      value: _perJobMemoryLimit.toDouble(),
+                      min: 10.0,
+                      max: 200.0,
+                      divisions: 19,
+                      label: '$_perJobMemoryLimit MB',
+                      onChanged: _isProcessing
+                          ? null
+                          : (v) =>
+                                setState(() => _perJobMemoryLimit = v.toInt()),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    'DEVICE TOTAL: ${_deviceTotal.toStringAsFixed(0)} MB',
+                    style: const TextStyle(fontSize: 9, color: Colors.grey),
+                  ),
+                  Text(
+                    'DEVICE AVAIL: ${_deviceAvail.toStringAsFixed(0)} MB',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: _lowMemory ? Colors.red : Colors.greenAccent,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -443,6 +527,7 @@ class _ConsumerHomePageState extends State<ConsumerHomePage> {
     if (status.contains('Compiling')) return Colors.orange;
     if (status.contains('Running')) return Colors.green;
     if (status == 'Completed') return Colors.cyanAccent;
+    if (status == 'Failed') return Colors.redAccent;
     return Colors.grey;
   }
 }
