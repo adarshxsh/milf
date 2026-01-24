@@ -1,0 +1,85 @@
+Launching lib/main.dart on sdk gphone16k arm64 in debug mode...
+Running Gradle task 'assembleDebug'...                          
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:buildCMakeDebug[arm64-v8a]'.
+> com.android.ide.common.process.ProcessException: ninja: Entering directory `/Users/adarsh/Projects/devlup/milf/consumer/build/.cxx/debug/6hs556u4/arm64-v8a'
+  [1/36] Building C object CMakeFiles/consumer_native.dir/third_party/wamr/core/shared/platform/common/posix/posix_blocking_op.c.o
+  [2/36] Building C object CMakeFiles/consumer_native.dir/third_party/wamr/core/shared/platform/common/posix/posix_memmap.c.o
+  [3/36] Building C object CMakeFiles/consumer_native.dir/third_party/wamr/core/shared/platform/android/platform_init.c.o
+  [4/36] Building C object CMakeFiles/consumer_native.dir/third_party/wamr/core/shared/platform/common/posix/posix_malloc.c.o
+  [5/36] Building C object CMakeFiles/consumer_native.dir/third_party/wamr/core/shared/platform/common/posix/posix_sleep.c.o
+  [6/36] Building C object CMakeFiles/consumer_native.dir/third_party/wamr/core/iwasm/aot/arch/aot_reloc_aarch64.c.o
+  [7/36] Building C object CMakeFiles/consumer_native.dir/third_party/wamr/core/shared/platform/common/posix/posix_clock.c.o
+  [8/36] Building C object CMakeFiles/consumer_native.dir/third_party/wamr/core/shared/platform/common/posix/posix_thread.c.o
+  [9/36] Building C object CMakeFiles/consumer_native.dir/third_party/wamr/core/shared/platform/common/posix/posix_file.c.o
+  [10/36] Building C object CMakeFiles/consumer_native.dir/third_party/wamr/core/shared/platform/common/libc-util/libc_errno.c.o
+  [11/36] Building C object CMakeFiles/consumer_native.dir/third_party/wamr/core/iwasm/common/wasm_native.c.o
+  FAILED: CMakeFiles/consumer_native.dir/third_party/wamr/core/iwasm/common/wasm_native.c.o 
+  /Users/adarsh/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang --target=aarch64-none-linux-android24 --sysroot=/Users/adarsh/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DBH_FREE=wasm_runtime_free -DBH_MALLOC=wasm_runtime_malloc -DBH_PLATFORM_ANDROID=1 -DBUILD_TARGET=\"AARCH64\" -DWASM_ENABLE_AOT=1 -DWASM_ENABLE_FAST_INTERP=1 -DWASM_ENABLE_INTERP=1 -DWASM_ENABLE_LIBC_BUILTIN=1 -DWASM_ENABLE_LIBC_WASI=1 -DWASM_ENABLE_MULTI_MODULE=1 -Dconsumer_native_EXPORTS -I/Users/adarsh/Projects/devlup/milf/consumer/android/app/src/main/cpp/third_party/wamr/core/iwasm/include -I/Users/adarsh/Projects/devlup/milf/consumer/android/app/src/main/cpp/third_party/wamr/core/iwasm/common -I/Users/adarsh/Projects/devlup/milf/consumer/android/app/src/main/cpp/third_party/wamr/core/iwasm/interpreter -I/Users/adarsh/Projects/devlup/milf/consumer/android/app/src/main/cpp/third_party/wamr/core/iwasm/aot -I/Users/adarsh/Projects/devlup/milf/consumer/android/app/src/main/cpp/third_party/wamr/core/shared/platform/android -I/Users/adarsh/Projects/devlup/milf/consumer/android/app/src/main/cpp/third_party/wamr/core/shared/platform/include -I/Users/adarsh/Projects/devlup/milf/consumer/android/app/src/main/cpp/third_party/wamr/core/shared/platform/common/libc-util -I/Users/adarsh/Projects/devlup/milf/consumer/android/app/src/main/cpp/third_party/wamr/core/shared/mem-alloc -I/Users/adarsh/Projects/devlup/milf/consumer/android/app/src/main/cpp/third_party/wamr/core/shared/utils -I/Users/adarsh/Projects/devlup/milf/consumer/android/app/src/main/cpp/third_party/wamr/core/iwasm/common/gc -I/Users/adarsh/Projects/devlup/milf/consumer/android/app/src/main/cpp/third_party/wamr/core/iwasm/common/gc/stringref -I/Users/adarsh/Projects/devlup/milf/consumer/android/app/src/main/cpp -I/Users/adarsh/Projects/devlup/milf/consumer/android/app/src/main/cpp/third_party/wamr/core/iwasm/libraries/libc-wasi/sandboxed-system-primitives/include -I/Users/adarsh/Projects/devlup/milf/consumer/android/app/src/main/cpp/third_party/wamr/core/iwasm/libraries/libc-wasi/sandboxed-system-primitives/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -fno-limit-debug-info  -fPIC -MD -MT CMakeFiles/consumer_native.dir/third_party/wamr/core/iwasm/common/wasm_native.c.o -MF CMakeFiles/consumer_native.dir/third_party/wamr/core/iwasm/common/wasm_native.c.o.d -o CMakeFiles/consumer_native.dir/third_party/wamr/core/iwasm/common/wasm_native.c.o -c /Users/adarsh/Projects/devlup/milf/consumer/android/app/src/main/cpp/third_party/wamr/core/iwasm/common/wasm_native.c
+  /Users/adarsh/Projects/devlup/milf/consumer/android/app/src/main/cpp/third_party/wamr/core/iwasm/common/wasm_native.c:456:12: error: call to undeclared function 'wasm_native_get_context'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+    456 |     return wasm_native_get_context(module_inst_comm, g_wasi_context_key);
+        |            ^
+  /Users/adarsh/Projects/devlup/milf/consumer/android/app/src/main/cpp/third_party/wamr/core/iwasm/common/wasm_native.c:456:12: note: did you mean 'wasm_runtime_get_context'?
+  /Users/adarsh/Projects/devlup/milf/consumer/android/app/src/main/cpp/third_party/wamr/core/iwasm/common/wasm_runtime_common.h:1295:1: note: 'wasm_runtime_get_context' declared here
+   1295 | wasm_runtime_get_context(WASMModuleInstanceCommon *inst, void *key);
+        | ^
+  /Users/adarsh/Projects/devlup/milf/consumer/android/app/src/main/cpp/third_party/wamr/core/iwasm/common/wasm_native.c:456:12: error: incompatible integer to pointer conversion returning 'int' from a function with result type 'WASIContext *' (aka 'struct WASIContext *') [-Wint-conversion]
+    456 |     return wasm_native_get_context(module_inst_comm, g_wasi_context_key);
+        |            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  /Users/adarsh/Projects/devlup/milf/consumer/android/app/src/main/cpp/third_party/wamr/core/iwasm/common/wasm_native.c:463:5: error: call to undeclared function 'wasm_native_set_context'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+    463 |     wasm_native_set_context(module_inst_comm, g_wasi_context_key, wasi_ctx);
+        |     ^
+  /Users/adarsh/Projects/devlup/milf/consumer/android/app/src/main/cpp/third_party/wamr/core/iwasm/common/wasm_native.c:463:5: note: did you mean 'wasm_runtime_set_context'?
+  /Users/adarsh/Projects/devlup/milf/consumer/android/app/src/main/cpp/third_party/wamr/core/iwasm/common/wasm_runtime_common.h:1288:1: note: 'wasm_runtime_set_context' declared here
+   1288 | wasm_runtime_set_context(WASMModuleInstanceCommon *inst, void *key, void *ctx);
+        | ^
+  /Users/adarsh/Projects/devlup/milf/consumer/android/app/src/main/cpp/third_party/wamr/core/iwasm/common/wasm_native.c:509:26: error: call to undeclared function 'wasm_native_create_context_key'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+    509 |     g_wasi_context_key = wasm_native_create_context_key(wasi_context_dtor);
+        |                          ^
+  /Users/adarsh/Projects/devlup/milf/consumer/android/app/src/main/cpp/third_party/wamr/core/iwasm/common/wasm_native.c:509:26: note: did you mean 'wasm_runtime_create_context_key'?
+  /Users/adarsh/Projects/devlup/milf/consumer/android/app/src/main/cpp/third_party/wamr/core/iwasm/common/wasm_runtime_common.h:1279:1: note: 'wasm_runtime_create_context_key' declared here
+   1279 | wasm_runtime_create_context_key(void (*dtor)(WASMModuleInstanceCommon *inst,
+        | ^
+  /Users/adarsh/Projects/devlup/milf/consumer/android/app/src/main/cpp/third_party/wamr/core/iwasm/common/wasm_native.c:509:24: error: incompatible integer to pointer conversion assigning to 'void *' from 'int' [-Wint-conversion]
+    509 |     g_wasi_context_key = wasm_native_create_context_key(wasi_context_dtor);
+        |                        ^ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  /Users/adarsh/Projects/devlup/milf/consumer/android/app/src/main/cpp/third_party/wamr/core/iwasm/common/wasm_native.c:637:9: error: call to undeclared function 'wasm_native_destroy_context_key'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+    637 |         wasm_native_destroy_context_key(g_wasi_context_key);
+        |         ^
+  /Users/adarsh/Projects/devlup/milf/consumer/android/app/src/main/cpp/third_party/wamr/core/iwasm/common/wasm_native.c:637:9: note: did you mean 'wasm_runtime_destroy_context_key'?
+  /Users/adarsh/Projects/devlup/milf/consumer/android/app/src/main/cpp/third_party/wamr/core/iwasm/common/wasm_runtime_common.h:1284:1: note: 'wasm_runtime_destroy_context_key' declared here
+   1284 | wasm_runtime_destroy_context_key(void *key);
+        | ^
+  6 errors generated.
+  [12/36] Building C object CMakeFiles/consumer_native.dir/third_party/wamr/core/shared/platform/common/posix/posix_socket.c.o
+  [13/36] Building C object CMakeFiles/consumer_native.dir/third_party/wamr/core/shared/platform/common/posix/posix_time.c.o
+  [14/36] Building C object CMakeFiles/consumer_native.dir/third_party/wamr/core/iwasm/libraries/libc-wasi/libc_wasi_wrapper.c.o
+  [15/36] Building C object CMakeFiles/consumer_native.dir/third_party/wamr/core/shared/platform/common/memory/mremap.c.o
+  [16/36] Building C object CMakeFiles/consumer_native.dir/third_party/wamr/core/shared/utils/bh_bitmap.c.o
+  [17/36] Building C object CMakeFiles/consumer_native.dir/third_party/wamr/core/shared/utils/bh_assert.c.o
+  [18/36] Building C object CMakeFiles/consumer_native.dir/third_party/wamr/core/shared/utils/bh_hashmap.c.o
+  [19/36] Building C object CMakeFiles/consumer_native.dir/third_party/wamr/core/shared/utils/bh_common.c.o
+  [20/36] Building C object CMakeFiles/consumer_native.dir/third_party/wamr/core/shared/utils/bh_leb128.c.o
+  [21/36] Building C object CMakeFiles/consumer_native.dir/third_party/wamr/core/shared/utils/bh_log.c.o
+  [22/36] Building C object CMakeFiles/consumer_native.dir/third_party/wamr/core/shared/utils/bh_list.c.o
+  ninja: build stopped: subcommand failed.
+
+  C++ build system [build] failed while executing:
+      /Users/adarsh/Library/Android/sdk/cmake/3.22.1/bin/ninja \
+        -C \
+        /Users/adarsh/Projects/devlup/milf/consumer/build/.cxx/debug/6hs556u4/arm64-v8a \
+        consumer_native
+    from /Users/adarsh/Projects/devlup/milf/consumer/android/app
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 1s
+Running Gradle task 'assembleDebug'...                           1,377ms
+Error: Gradle task assembleDebug failed with exit code 1
