@@ -42,7 +42,7 @@ class ConsumerApp extends StatelessWidget {
     );
   }
 }
-
+// store state of each job
 class WasmJob {
   final String fileName;
   final String? sourcePath; // Added source path
@@ -63,6 +63,7 @@ class ConsumerHomePage extends StatefulWidget {
 }
 
 class _ConsumerHomePageState extends State<ConsumerHomePage> {
+  // Home page variables 
   final List<WasmJob> _jobs = [];
   bool _isProcessing = false;
   final NativeBridge _bridge = NativeBridge();
@@ -80,7 +81,7 @@ class _ConsumerHomePageState extends State<ConsumerHomePage> {
   @override
   void initState() {
     super.initState();
-    _startStatsPolling();
+    _startStatsPolling(); 
   }
 
   @override
@@ -110,7 +111,7 @@ class _ConsumerHomePageState extends State<ConsumerHomePage> {
     final result = await FilePicker.platform.pickFiles(
       allowMultiple: true,
       type: FileType.custom,
-      allowedExtensions: ['c', 'wasm'],
+      allowedExtensions: ['wasm'],
     );
 
     if (result != null) {
@@ -176,9 +177,6 @@ class _ConsumerHomePageState extends State<ConsumerHomePage> {
       _activeJobsCount++;
     });
 
-    // Simulating C -> WASM Compile
-    await Future.delayed(const Duration(seconds: 2));
-
     if (!mounted) {
       _activeJobsCount--;
       return;
@@ -200,7 +198,7 @@ class _ConsumerHomePageState extends State<ConsumerHomePage> {
         return;
       }
     } else {
-      // Fallback for C files (simulated compilation) or dummy
+      // Fallback for C files (simulated compilation) or dummy not used 
       wasmBytes = Uint8List.fromList([
         0x00,
         0x61,
@@ -232,7 +230,7 @@ class _ConsumerHomePageState extends State<ConsumerHomePage> {
       _activeJobsCount--;
     });
   }
-
+  // UI 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -320,7 +318,7 @@ class _ConsumerHomePageState extends State<ConsumerHomePage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'PER-JOB RAM LIMIT: ${_perJobMemoryLimit} MB',
+                      'PER-JOB RAM LIMIT: $_perJobMemoryLimit MB',
                       style: const TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.bold,

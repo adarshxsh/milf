@@ -2,4 +2,8 @@ CentralServer/
 Client/
 
 consumer/plan.txt
+.vscode/
 
+
+# WASM Binaries
+*.wasm
