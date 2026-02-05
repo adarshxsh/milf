@@ -11,7 +11,11 @@ interface WasmServiceInterface {
     String runWasm(in byte[] wasmBytes);
     
     /**
-     * Executes 'add' function in WASM with two integer inputs.
+     * Executes a specific WASM function by name with a list of integer arguments.
+     * This is the "Generic Dispatcher" that allows running any WASM module.
      */
+    int invokeWasm(in byte[] wasmBytes, String funcName, in int[] args);
+
+    // Old hardcoded method for reference/compatibility
     int wasmAdd(in byte[] wasmBytes, int a, int b);
 }

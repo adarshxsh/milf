@@ -4,7 +4,7 @@ import android.app.Service
 import android.content.Intent
 import android.os.IBinder
 
-// Controller 
+// Controller
 
 class WasmService : Service() {
 
@@ -16,6 +16,15 @@ class WasmService : Service() {
 
     private val binder =
             object : WasmServiceInterface.Stub() {
+                override fun invokeWasm(
+                        wasmBytes: ByteArray?,
+                        funcName: String?,
+                        args: IntArray?
+                ): Int {
+                    if (wasmBytes == null || funcName == null || args == null) return -1
+                    return this@WasmService.invokeWasm(wasmBytes, funcName, args)
+                }
+
                 override fun runWasm(wasmBytes: ByteArray?): String {
                     if (wasmBytes == null) return "Error: Null bytes"
                     return this@WasmService.runWasm(wasmBytes)
@@ -23,7 +32,7 @@ class WasmService : Service() {
 
                 override fun wasmAdd(wasmBytes: ByteArray?, a: Int, b: Int): Int {
                     if (wasmBytes == null) return -1
-                    return this@WasmService.wasmAdd(wasmBytes, a, b)
+                    return this@WasmService.wasmAdd(wasmBytes, intArrayOf(a, b))
                 }
             }
 
@@ -34,7 +43,8 @@ class WasmService : Service() {
     // JNI Native methods
     external fun initWasm(): Int
     external fun runWasm(wasmBytes: ByteArray): String
-    external fun wasmAdd(wasmBytes: ByteArray, a: Int, b: Int): Int
+    external fun wasmAdd(wasmBytes: ByteArray, args: IntArray): Int
+    external fun invokeWasm(wasmBytes: ByteArray, funcName: String, args: IntArray): Int
 
     companion object {
         init {

@@ -66,6 +66,8 @@ add_library(
         native-lib
         SHARED
         native-lib.cpp
+        memory_tracker.cpp  # Memory tracking for 512MB heap
+        execution_monitor.cpp  # Execution metrics and timeout protection
         ${WAMR_CORE_SRC}
 )
 

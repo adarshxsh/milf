@@ -10,7 +10,6 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import java.util.concurrent.Executors
 
-
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "com.example.consumeronlywamr/wasm"
     private var wasmService: WasmServiceInterface? = null
@@ -39,27 +38,50 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler {
                 call,
                 result ->
-            if (call.method == "runWasm") {
-                val wasmBytes = call.argument<ByteArray>("bytes")
-                if (wasmBytes != null && isBound && wasmService != null) {
-                    // Run on background thread to not block UI
-                    Executors.newSingleThreadExecutor().execute {
-                        try {
-                            val output = wasmService?.runWasm(wasmBytes)
-                            runOnUiThread { result.success(output) }
-                        } catch (e: Exception) {
-                            runOnUiThread { result.error("EXECUTION_ERROR", e.toString(), null) }
+            when (call.method) {
+                "runWasm" -> {
+                    val wasmBytes = call.argument<ByteArray>("bytes")
+                    if (wasmBytes != null && isBound && wasmService != null) {
+                        Executors.newSingleThreadExecutor().execute {
+                            try {
+                                val output = wasmService?.runWasm(wasmBytes)
+                                runOnUiThread { result.success(output) }
+                            } catch (e: Exception) {
+                                runOnUiThread {
+                                    result.error("EXECUTION_ERROR", e.toString(), null)
+                                }
+                            }
                         }
-                    }
-                } else {
-                    if (!isBound) {
-                        result.error("SERVICE_NOT_BOUND", "WasmService is not bound yet", null)
                     } else {
-                        result.error("INVALID_ARGUMENT", "Bytes are null", null)
+                        result.error("ERROR", "Service not bound or null bytes", null)
                     }
                 }
-            } else {
-                result.notImplemented()
+                "invokeWasm" -> {
+                    val bytes = call.argument<ByteArray>("bytes")
+                    val func = call.argument<String>("funcName")
+                    val args = call.argument<IntArray>("args")
+
+                    if (bytes != null &&
+                                    func != null &&
+                                    args != null &&
+                                    isBound &&
+                                    wasmService != null
+                    ) {
+                        Executors.newSingleThreadExecutor().execute {
+                            try {
+                                val res = wasmService?.invokeWasm(bytes, func, args)
+                                runOnUiThread { result.success(res) }
+                            } catch (e: Exception) {
+                                runOnUiThread { result.error("INVOKE_ERROR", e.toString(), null) }
+                            }
+                        }
+                    } else {
+                        result.error("INVALID_ARGS", "Missing arguments for invokeWasm", null)
+                    }
+                }
+                else -> {
+                    result.notImplemented()
+                }
             }
         }
     }

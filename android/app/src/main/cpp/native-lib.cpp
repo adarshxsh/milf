@@ -1,3 +1,5 @@
+#include "execution_monitor.h"
+#include "memory_tracker.h"
 #include "wasm_export.h"
 #include "wasm_runtime.h"
 #include <android/log.h>
@@ -18,24 +20,33 @@ extern "C" JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
   return JNI_VERSION_1_6;
 }
 
-static char global_heap_buf[512 * 1024];
+// REMOVED: static char global_heap_buf[512 * 1024];
+// Now using system allocator for dynamic memory!
 
 extern "C" JNIEXPORT jint JNICALL
 Java_com_example_consumeronlywamr_WasmService_initWasm(JNIEnv *env,
                                                        jobject /* this */) {
 
+  LOGI("Initializing WAMR with dynamic memory allocation");
+
   RuntimeInitArgs init_args;
   memset(&init_args, 0, sizeof(RuntimeInitArgs));
 
-  init_args.mem_alloc_type = Alloc_With_Pool;
-  init_args.mem_alloc_option.pool.heap_buf = global_heap_buf;
-  init_args.mem_alloc_option.pool.heap_size = sizeof(global_heap_buf);
+  // USE SYSTEM ALLOCATOR (not pool-based)
+  init_args.mem_alloc_type = Alloc_With_System_Allocator;
+  init_args.max_thread_num = 4;
+
+  // Initialize memory tracking
+  MemoryTracker::Initialize();
 
   if (!wasm_runtime_full_init(&init_args)) {
     LOGE("Init runtime environment failed.");
     return -1;
   }
+
   LOGI("Init runtime environment success.");
+  LOGI("  Max heap: %zu MB", MemoryTracker::GetMaxHeap() / (1024 * 1024));
+  LOGI("  Max stack: %zu MB", MemoryTracker::GetMaxStack() / (1024 * 1024));
   return 0;
 }
 
@@ -62,9 +73,29 @@ Java_com_example_consumeronlywamr_WasmService_runWasm(JNIEnv *env,
   // 2.5 Set WASI parameters
   wasm_runtime_set_wasi_args(module, NULL, 0, NULL, 0, NULL, 0, NULL, 0);
 
-  // 3. Instantiate module
+  // Check if we're near memory limit before instantiation
+  if (MemoryTracker::IsNearLimit()) {
+    LOGE("Cannot instantiate: too close to memory limit");
+    wasm_runtime_unload(module);
+    env->ReleaseByteArrayElements(wasmBytes, buffer, JNI_ABORT);
+    return env->NewStringUTF("Error: Memory limit reached (RSS > 1.2GB)");
+  }
+
+  // 3. Instantiate module with 512MB heap, 16MB stack
+  size_t stack_size = MemoryTracker::GetMaxStack(); // 16MB
+  size_t heap_size = MemoryTracker::GetMaxHeap();   // 512MB
+
+  LOGI("Instantiating module: heap=%zu MB, stack=%zu MB",
+       heap_size / (1024 * 1024), stack_size / (1024 * 1024));
+
+  // Record allocation for tracking
+  MemoryTracker::RecordAllocation(heap_size + stack_size);
+
+  // Start execution monitoring
+  ExecutionMonitor::StartExecution("app_main", len, heap_size, stack_size);
+
   wasm_module_inst_t module_inst = wasm_runtime_instantiate(
-      module, 8192, 8192, error_buf, sizeof(error_buf));
+      module, stack_size, heap_size, error_buf, sizeof(error_buf));
   if (!module_inst) {
     wasm_runtime_unload(module);
     env->ReleaseByteArrayElements(wasmBytes, buffer, JNI_ABORT);
@@ -163,11 +194,17 @@ Java_com_example_consumeronlywamr_WasmService_runWasm(JNIEnv *env,
     result_msg = "No entry point found";
   }
 
+  // End execution monitoring
+  ExecutionMonitor::Metrics metrics = ExecutionMonitor::EndExecution(0);
+
   // Cleanup
   wasm_runtime_destroy_exec_env(exec_env);
   wasm_runtime_deinstantiate(module_inst);
   wasm_runtime_unload(module);
   env->ReleaseByteArrayElements(wasmBytes, buffer, JNI_ABORT);
+
+  // Record deallocation
+  MemoryTracker::RecordDeallocation(heap_size + stack_size);
 
   return env->NewStringUTF(result_msg);
 }
@@ -271,6 +308,95 @@ Java_com_example_consumeronlywamr_WasmService_wasmAdd(JNIEnv *env, jobject,
   if (module)
     wasm_runtime_unload(module);
   free(buffer);
+
+  return result;
+}
+extern "C" JNIEXPORT jint JNICALL
+Java_com_example_consumeronlywamr_WasmService_invokeWasm(JNIEnv *env, jobject,
+                                                         jbyteArray wasmBytes,
+                                                         jstring funcName,
+                                                         jintArray args) {
+
+  const char *nativeFuncName = env->GetStringUTFChars(funcName, NULL);
+  jint *nativeArgs = env->GetIntArrayElements(args, NULL);
+  jsize argCount = env->GetArrayLength(args);
+
+  char *buffer = NULL;
+  char error_buf[128];
+  wasm_module_t module = NULL;
+  wasm_module_inst_t module_inst = NULL;
+  wasm_exec_env_t exec_env = NULL;
+  jint result = -1;
+
+  // 1. Load Bytes
+  jsize length = env->GetArrayLength(wasmBytes);
+  buffer = (char *)malloc(length);
+  if (!buffer) {
+    LOGE("Failed to allocate buffer");
+    goto cleanup;
+  }
+  env->GetByteArrayRegion(wasmBytes, 0, length, (jbyte *)buffer);
+
+  // 2. Load Module
+  module = wasm_runtime_load((uint8_t *)buffer, length, error_buf,
+                             sizeof(error_buf));
+  if (!module) {
+    LOGE("Load failed: %s", error_buf);
+    goto cleanup;
+  }
+
+  // 3. Instantiate
+  module_inst = wasm_runtime_instantiate(module, 8192, 8192, error_buf,
+                                         sizeof(error_buf));
+  if (!module_inst) {
+    LOGE("Instantiation failed: %s", error_buf);
+    goto cleanup;
+  }
+
+  // 4. Create Exec Env
+  exec_env = wasm_runtime_create_exec_env(module_inst, 8192);
+  if (!exec_env) {
+    LOGE("Exec env creation failed");
+    goto cleanup;
+  }
+
+  // 5. Dynamic Lookup
+  {
+    wasm_function_inst_t func =
+        wasm_runtime_lookup_function(module_inst, nativeFuncName);
+    if (func) {
+      // Create argv buffer. WAMR needs space for both args and result.
+      // Since we expect 1 result, we need max(argCount, 1).
+      uint32_t *argv =
+          (uint32_t *)malloc(sizeof(uint32_t) * (argCount > 0 ? argCount : 1));
+      for (int i = 0; i < argCount; i++) {
+        argv[i] = (uint32_t)nativeArgs[i];
+      }
+
+      if (wasm_runtime_call_wasm(exec_env, func, argCount, argv)) {
+        result = (jint)argv[0];
+        LOGI("invokeWasm: %s executed. Result: %d", nativeFuncName, result);
+      } else {
+        LOGE("Execution failed: %s", wasm_runtime_get_exception(module_inst));
+      }
+      free(argv);
+    } else {
+      LOGE("Function '%s' not found in WASM module", nativeFuncName);
+    }
+  }
+
+cleanup:
+  if (exec_env)
+    wasm_runtime_destroy_exec_env(exec_env);
+  if (module_inst)
+    wasm_runtime_deinstantiate(module_inst);
+  if (module)
+    wasm_runtime_unload(module);
+  if (buffer)
+    free(buffer);
+
+  env->ReleaseStringUTFChars(funcName, nativeFuncName);
+  env->ReleaseIntArrayElements(args, nativeArgs, JNI_ABORT);
 
   return result;
 }
