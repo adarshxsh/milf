@@ -104,6 +104,9 @@ func main() {
 	// ObjectStore for Compiler - Use PostgreSQL to fetch from same DB
 	objectStore := storage.NewPostgresObjectStore(userRepo.GetDB())
 
+	// Wire Log Repository (Phase 4: Observability)
+	logRepo := storage.NewPostgresLogRepo(userRepo.GetDB())
+
 	// Trigger for Compiler
 	trigger := &storage.DummyRunTrigger{}
 
@@ -114,7 +117,7 @@ func main() {
 
 	lambdaService := gwcore.NewLambdaService(gatewayDB, compilerRepo, nil, compQueue, executionRepo)
 	orchestrator := orchcore.NewOrchestrator(functionRepo, lambdaService, queueService)
-	compiler := compilercore.NewCompiler(objectStore, trigger, compQueue, orchestrator)
+	compiler := compilercore.NewCompiler(objectStore, trigger, compQueue, orchestrator, logRepo)
 	clangPath := os.Getenv("CLANG_PATH")
 	log.Printf("[Main] Using CLANG_PATH from env: %s", clangPath)
 	if _, err := os.Stat(clangPath); os.IsNotExist(err) {
@@ -132,7 +135,6 @@ func main() {
 	go scheduler.Start(ctx)
 
 	// 4.6 Wire Log Repository (Phase 4: Observability)
-	logRepo := storage.NewPostgresLogRepo(userRepo.GetDB())
 	lambdaService.SetLogRepo(logRepo)
 
 	// 5. Handlers & Routers
@@ -209,7 +211,7 @@ func main() {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Access-Control-Allow-Origin", "*")
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Filename")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Filename, X-Gemini-Api-Key")
 			if r.Method == "OPTIONS" {
 				w.WriteHeader(http.StatusOK)
 				return

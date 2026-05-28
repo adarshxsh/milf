@@ -251,3 +251,49 @@ export async function getScheduleStatus(id: string, token: string): Promise<{ id
   if (!res.ok) throw new Error("Failed to get schedule status");
   return res.json();
 }
+
+/* Copilot */
+export async function runCopilot(
+  prompt: string,
+  code: string | undefined,
+  token: string
+): Promise<{ insight: string; code: string }> {
+  const userKey = localStorage.getItem("milf_user_gemini_key") || "";
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${token}`,
+  };
+  if (userKey) {
+    headers["X-Gemini-Api-Key"] = userKey;
+  }
+
+  const res = await fetch(`${API_BASE_URL}/api/v1/copilot`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ prompt, code }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || "Copilot generation failed");
+  }
+  return res.json();
+}
+
+export async function testCopilotKey(
+  key: string,
+  token: string
+): Promise<{ valid: boolean }> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/copilot/test-key`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`,
+      "X-Gemini-Api-Key": key,
+    },
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || "Key validation failed");
+  }
+  return res.json();
+}
