@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'cloud_sync.dart';
+import 'config.dart';
 
 /// Tracks a single WASM execution for the history log.
 class ExecutionRecord {
@@ -51,7 +52,7 @@ class NodeController extends ChangeNotifier {
   static const _platform = MethodChannel('com.example.consumeronlywamr/wasm');
 
   // ── Configuration ─────────────────────────────────────────────────────────
-  String serverUrl = 'http://10.0.2.2:8080';
+  String serverUrl = defaultServerUrl;
   String authToken = '';
 
   // ── Reactive State ────────────────────────────────────────────────────────
@@ -65,6 +66,10 @@ class NodeController extends ChangeNotifier {
 
   // ── Internal ──────────────────────────────────────────────────────────────
   CloudSync? _sync;
+
+  NodeController() {
+    connect();
+  }
 
   bool get isConnected =>
       status == NodeStatus.online || status == NodeStatus.executing;
@@ -118,6 +123,7 @@ class NodeController extends ChangeNotifier {
   }
 
   void _log(String msg) {
+    debugPrint('MILF_NODE: $msg');
     final timestamp = DateTime.now();
     final hms =
         '${timestamp.hour.toString().padLeft(2, '0')}:'
