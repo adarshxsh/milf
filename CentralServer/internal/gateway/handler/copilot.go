@@ -101,7 +101,7 @@ Core constraints:
    - void milf_stream_close(int handle)
    - int milf_pdf_generate(const char* text, char* target_buf, int max_len) (returns size or error < 0)
    - int milf_storage_save(const char* name, const char* data, int len) (returns 0 or error < 0)
-4. CRITICAL: PDF generation or binary output MUST NOT be written directly to out_buf (crashes JNI). Instead, use milf_storage_save, write a string reference like "FILE:output.pdf" to out_buf, and return the string length.
+4. CRITICAL: DO NOT declare large static/global arrays (e.g., char buf[1024*1024*2]) for file/PDF generation in WASM memory, as it exceeds memory boundaries. Instead, reuse the pre-allocated out_buf (size out_max) as scratch space for milf_pdf_generate, save it with milf_storage_save, and then overwrite out_buf with the "FILE:out.pdf" string reference. Return the reference string length.
 5. Payloads are wrapped as JSON (e.g. {"type":"json","data":"value"}). Write simple helper loops with milf_memcmp to search and extract values from the payload.
 
 LEARNING CONTEXT (Pattern Examples):
@@ -112,8 +112,9 @@ LEARNING CONTEXT (Pattern Examples):
    int bytes = milf_stream_read(handle, buf, size);
    milf_stream_close(handle);
 4. Constructing Files/PDFs (Try2pdf/Imgtopdf):
-   Write binary/headers (like %PDF-1.4) directly into a large local array or out_buf if not returning as JNI string.
-   milf_storage_save("out.pdf", pdf_buf, pdf_size);
+   // Use out_buf directly as the scratchpad for generation to avoid massive static array allocations
+   int pdf_size = milf_pdf_generate(text_buf, out_buf, out_max);
+   milf_storage_save("out.pdf", out_buf, pdf_size);
    const char* ref = "FILE:out.pdf";
    milf_memcpy(out_buf, ref, milf_strlen(ref));
    return milf_strlen(ref);

@@ -24,8 +24,11 @@ Uint8List _decodeTaskInput(Map<String, dynamic>? input) {
   if (input['type'] == 'binary') {
     return base64Decode(input['data'] as String);
   }
-  // Default: treat as JSON → UTF-8 bytes
-  return Uint8List.fromList(utf8.encode(jsonEncode(input['data'] ?? {})));
+  if (input.containsKey('type') && input.containsKey('data')) {
+    return Uint8List.fromList(utf8.encode(jsonEncode(input['data'] ?? {})));
+  }
+  // Default: treat the whole input map as the JSON data
+  return Uint8List.fromList(utf8.encode(jsonEncode(input)));
 }
 
 /// Hardened WebSocket manager for the MILF node.
@@ -70,6 +73,42 @@ class CloudSync {
 
   // ── Registration ──────────────────────────────────────────────────────────
 
+  Future<void> _login() async {
+    try {
+      onLog('Logging in node with server...');
+      final headers = <String, String>{
+        'Content-Type': 'application/json',
+      };
+
+      final res = await http.post(
+        Uri.parse('$serverUrl/api/v1/sinks/login'),
+        headers: headers,
+        body: jsonEncode({
+          'email': 'node_primary@milf.local',
+          'password': 'unused',
+        }),
+      );
+
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        _sinkId = data['sink_id'] as String?;
+        if (_sinkId == null) {
+          onLog('Login error: sink_id missing in response');
+          return;
+        }
+        onLog('Logged in. SinkID: $_sinkId');
+        onSinkRegistered(_sinkId!);
+        _openWebSocket();
+      } else {
+        onLog('Login failed (${res.statusCode}): ${res.body}');
+        _scheduleReconnect();
+      }
+    } catch (e) {
+      onLog('Login error: $e');
+      _scheduleReconnect();
+    }
+  }
+
   Future<void> _register() async {
     try {
       onLog('Registering node with server...');
@@ -98,6 +137,9 @@ class CloudSync {
         onLog('Registered. SinkID: $_sinkId');
         onSinkRegistered(_sinkId!);
         _openWebSocket();
+      } else if (res.statusCode == 409) {
+        onLog('Sink already registered. Attempting login...');
+        await _login();
       } else {
         onLog('Registration failed (${res.statusCode}): ${res.body}');
         _scheduleReconnect();

@@ -66,6 +66,10 @@ class NodeController extends ChangeNotifier {
   // ── Internal ──────────────────────────────────────────────────────────────
   CloudSync? _sync;
 
+  NodeController() {
+    connect();
+  }
+
   bool get isConnected =>
       status == NodeStatus.online || status == NodeStatus.executing;
 
@@ -118,6 +122,7 @@ class NodeController extends ChangeNotifier {
   }
 
   void _log(String msg) {
+    debugPrint('MILF_NODE: $msg');
     final timestamp = DateTime.now();
     final hms =
         '${timestamp.hour.toString().padLeft(2, '0')}:'

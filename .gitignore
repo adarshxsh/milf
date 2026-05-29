@@ -30,6 +30,8 @@ tmp/
 # --- CentralServer (Go) ---
 CentralServer/.env
 CentralServer/server
+CentralServer/uploads
+CentralServer/Scratch
 # Go binaries and build artifacts
 CentralServer/bin/
 CentralServer/*.exe

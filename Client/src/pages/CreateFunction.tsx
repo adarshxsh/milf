@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Upload, FileCode, Container, FileUp, FolderUp, X, AlertTriangle, CheckCircle2, Maximize2, Minimize2, Settings, Loader2, Clock, Zap, Sparkles, Brain, Bot, Copy, Check, Plus } from "lucide-react";
 
 import { Editor } from "@monaco-editor/react";
@@ -35,6 +35,7 @@ const STORAGE_KEY = "dark-canvas-create-function-draft";
 
 export default function CreateFunction() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const folderInputRef = useRef<HTMLInputElement>(null);
   const isEditorFullscreen = useRef(false);
@@ -124,9 +125,31 @@ MILF_EXPORT int wasm_main(char* payload, int payload_len, char* out_buf, int out
     }
   };
 
-  // Persistence Logic
+  // Template pre-fill: if navigated from Demo Functions tab
   useEffect(() => {
-    // ... (previous persistence code)
+    if (searchParams.get("from") === "template") {
+      const templateCode = sessionStorage.getItem("milf-template-code");
+      const templateRuntime = sessionStorage.getItem("milf-template-runtime");
+      const templateName = sessionStorage.getItem("milf-template-name");
+      if (templateCode) {
+        setFormData(prev => ({
+          ...prev,
+          code: templateCode,
+          runtime: templateRuntime || prev.runtime,
+          name: templateName || prev.name,
+        }));
+        // Clear so it doesn't persist on next visit
+        sessionStorage.removeItem("milf-template-code");
+        sessionStorage.removeItem("milf-template-runtime");
+        sessionStorage.removeItem("milf-template-name");
+        toast({
+          title: "Template loaded",
+          description: `"${templateName}" pre-filled in the editor. Give it a name and deploy!`,
+        });
+        return; // skip localStorage restore
+      }
+    }
+    // Persistence Logic — restore saved draft
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
@@ -137,6 +160,7 @@ MILF_EXPORT int wasm_main(char* payload, int payload_len, char* out_buf, int out
         console.error("Failed to restore draft", e);
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
