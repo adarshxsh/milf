@@ -27,6 +27,7 @@ import (
 	sinkhandler "central_server/internal/sinkManager/handler"
 	sinkinterfaces "central_server/internal/sinkManager/interfaces"
 	"central_server/internal/storage"
+	"path/filepath"
 	"central_server/internal/filestore"
 	"central_server/utils"
 )
@@ -34,9 +35,15 @@ import (
 func main() {
 	ctx := context.Background()
 
-	// Setup logging to file and stdout
-	logFile, _ := os.OpenFile("/tmp/milf_server.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	multi := io.MultiWriter(os.Stdout, logFile)
+	// Setup logging to file and stdout (cross-platform safe)
+	var logWriters []io.Writer
+	logWriters = append(logWriters, os.Stdout)
+	logPath := filepath.Join(os.TempDir(), "milf_server.log")
+	if logFile, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644); err == nil {
+		defer logFile.Close()
+		logWriters = append(logWriters, logFile)
+	}
+	multi := io.MultiWriter(logWriters...)
 	log.SetOutput(multi)
 	if utils.Logger != nil {
 		utils.Logger.SetOutput(multi)
